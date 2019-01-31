@@ -4,7 +4,7 @@ FROM nginx:1.15-alpine
 ENV ZIPKIN_REPO http://oss.jfrog.org/artifactory/oss-snapshot-local
 ENV ZIPKIN_BASE_URL=http://zipkin:9411
 
-RUN apk add --update --no-cache nginx curl && \
+RUN apk add --update --no-cache nginx curl shadow && \
     rm -rf /var/cache/apk/* /tmp/* /var/tmp/* && \
     # the current version of zipkin-lens is in a path of the same name in a jar file. This extracts it.
     LENS_BASE=$ZIPKIN_REPO/io/zipkin/zipkin2/zipkin-lens && \
@@ -15,13 +15,18 @@ RUN apk add --update --no-cache nginx curl && \
     unzip zipkin-lens.jar 'zipkin-lens/*' -d /var/www/html && \
     mv /var/www/html/zipkin-lens /var/www/html/zipkin && \
     rm -rf zipkin-lens.jar && \
+	usermod -u 1000 nginx && \
+	groupmod -g 1000 nginx && \
     mkdir -p /var/tmp/nginx && \
     chown -R nginx:nginx /var/tmp/nginx
 
+RUN chmod -R 777 /var/cache/nginx /var/run /var/lib/nginx/logs /var/tmp/nginx
 # Setup services
 ADD nginx.conf /etc/nginx/conf.d/zipkin.conf.template
 ADD run.sh /usr/local/bin/nginx.sh
 
-EXPOSE 80
+EXPOSE 8080
+
+USER 1000
 
 CMD ["/usr/local/bin/nginx.sh"]
